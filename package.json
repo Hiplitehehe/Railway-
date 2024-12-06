@@ -1,16 +1,23 @@
 {
-  "name": "my-backend",
+  "name": "token-claim-api",
   "version": "1.0.0",
-  "description": "Token Claim API",
+  "description": "A simple API for claiming tokens",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.17.1",
-    "mongoose": "^5.10.9"
+    "mongoose": "^5.10.9",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
   },
   "engines": {
     "node": "14.x"
-  }
+  },
+  "author": "Your Name",
+  "license": "ISC"
 }
