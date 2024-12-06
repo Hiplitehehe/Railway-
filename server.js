@@ -1,69 +1,67 @@
-// Load environment variables from .env file (if running locally)
-require('dotenv').config();
-
 const express = require('express');
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const Token = require('./models/token'); // Import the Token model
+
+dotenv.config();
+
 const app = express();
-
-// Mongo URI from environment variables (provided by Railway)
-const MONGO_URI = process.env.MONGO_URI;
-
-// Connect to MongoDB
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('Error connecting to MongoDB:', err));
-
-// Define the token schema
-const tokenSchema = new mongoose.Schema({
-  userId: String,
-  tokensLeft: Number,
-  lastClaimTime: Date
-});
-
-const Token = mongoose.model('Token', tokenSchema);
-
-// Middleware to parse JSON
 app.use(express.json());
 
-// POST endpoint to handle token claims
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.log('MongoDB connection error:', err));
+
+// Function to claim tokens
+const claimTokens = async (userId) => {
+  const now = new Date();
+  const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000); // 24 hours ago
+
+  // Find or create a token record for the user
+  let tokenRecord = await Token.findOne({ userId });
+
+  if (!tokenRecord) {
+    // Create a new record if the user hasn't claimed tokens yet
+    tokenRecord = new Token({
+      userId,
+      lastClaim: now,
+      claimedAmount: 0,
+    });
+  }
+
+  // Check if the user has already claimed tokens in the last 24 hours
+  if (tokenRecord.lastClaim > twentyFourHoursAgo) {
+    throw new Error('You can only claim tokens once every 24 hours');
+  }
+
+  // Update the token record with the new claim
+  tokenRecord.lastClaim = now;
+  tokenRecord.claimedAmount += 1000; // Add 1000 tokens (adjust as needed)
+
+  await tokenRecord.save();
+
+  return tokenRecord.claimedAmount;
+};
+
+// Claim endpoint
 app.post('/claim', async (req, res) => {
   const { userId } = req.body;
-  const claimAmount = 1000;  // Amount of tokens to claim
-  const currentTime = Date.now();
-  const claimInterval = 24 * 60 * 60 * 1000; // 24 hours
 
   if (!userId) {
-    return res.status(400).json({ message: 'User ID is required.' });
+    return res.status(400).json({ message: 'userId is required' });
   }
 
   try {
-    // Check if the user has already claimed tokens
-    let user = await Token.findOne({ userId });
-
-    if (user) {
-      const timeDiff = currentTime - user.lastClaimTime;
-      if (timeDiff < claimInterval) {
-        return res.status(400).json({ message: 'You can only claim once every 24 hours.' });
-      }
-
-      // If 24 hours have passed, update the user's tokens and claim time
-      user.tokensLeft += claimAmount;
-      user.lastClaimTime = currentTime;
-      await user.save();
-    } else {
-      // If the user doesn't exist, create a new entry
-      user = new Token({ userId, tokensLeft: claimAmount, lastClaimTime: currentTime });
-      await user.save();
-    }
-
-    return res.status(200).json({ message: 'Tokens claimed successfully!', tokensLeft: user.tokensLeft });
+    const claimedAmount = await claimTokens(userId);
+    res.status(200).json({ message: `You have successfully claimed ${claimedAmount} tokens!` });
   } catch (err) {
-    return res.status(500).json({ message: 'Error processing your request', error: err });
+    res.status(400).json({ message: err.message });
   }
 });
 
-// Start the Express server
-const PORT = process.env.PORT || 5000; // Railway provides the port dynamically
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start the server
+const port = process.env.PORT || 5000;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
