@@ -1,14 +1,19 @@
+// Load environment variables from .env file (if running locally)
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
 
-// Mongo URI - Replace with your actual Mongo URI
-const MONGO_URI = 'mongodb+srv://00876abc:00876abc@cluster0xx.aimbe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0xx';
+// Mongo URI from environment variables (provided by Railway)
+const MONGO_URI = process.env.MONGO_URI;
+
 // Connect to MongoDB
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Error connecting to MongoDB:', err));
 
+// Define the token schema
 const tokenSchema = new mongoose.Schema({
   userId: String,
   tokensLeft: Number,
@@ -20,9 +25,10 @@ const Token = mongoose.model('Token', tokenSchema);
 // Middleware to parse JSON
 app.use(express.json());
 
+// POST endpoint to handle token claims
 app.post('/claim', async (req, res) => {
   const { userId } = req.body;
-  const claimAmount = 1000;  // Amount to claim
+  const claimAmount = 1000;  // Amount of tokens to claim
   const currentTime = Date.now();
   const claimInterval = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -31,6 +37,7 @@ app.post('/claim', async (req, res) => {
   }
 
   try {
+    // Check if the user has already claimed tokens
     let user = await Token.findOne({ userId });
 
     if (user) {
@@ -39,12 +46,12 @@ app.post('/claim', async (req, res) => {
         return res.status(400).json({ message: 'You can only claim once every 24 hours.' });
       }
 
-      // Update user data
+      // If 24 hours have passed, update the user's tokens and claim time
       user.tokensLeft += claimAmount;
       user.lastClaimTime = currentTime;
       await user.save();
     } else {
-      // Create new user if not found
+      // If the user doesn't exist, create a new entry
       user = new Token({ userId, tokensLeft: claimAmount, lastClaimTime: currentTime });
       await user.save();
     }
@@ -56,7 +63,7 @@ app.post('/claim', async (req, res) => {
 });
 
 // Start the Express server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000; // Railway provides the port dynamically
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
