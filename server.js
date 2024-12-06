@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const app = express();
 
 // Mongo URI - Replace with your actual Mongo URI
-const MONGO_URI = 'mongodb+srv://username:password@cluster.mongodb.net/mydb?retryWrites=true&w=majority';
+const MONGO_URI = 'mongodb+srv://00876abc:00876abc@cluster.mongodb.net/mydb?retryWrites=true&w=majority';
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
