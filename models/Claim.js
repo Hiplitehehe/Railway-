@@ -1,22 +1,19 @@
-// models/Claim.js
-
 const mongoose = require('mongoose');
 
 const claimSchema = new mongoose.Schema({
   userId: {
     type: String,
-    required: true, // User ID is required for every record
-    unique: true,   // Ensure that userId is unique in the collection
+    required: true,
+    unique: true, // Ensure each userId is unique
   },
   amount: {
     type: Number,
     required: true,
-    default: 0, // Default token amount when a user first claims
+    default: 0, // Default tokens for new users
   },
   claimedAt: {
     type: Date,
-    required: true,
-    default: null, // Initially null, to mark when the user last claimed tokens
+    default: null, // Null for users who haven't claimed yet
   },
 });
 
